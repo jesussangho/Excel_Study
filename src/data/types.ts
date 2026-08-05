@@ -27,6 +27,16 @@ export interface GuidedWidgetConfig {
   cells: GuidedCell[];
   formula: string;
   resultLabel: string;
+  /** Name of a second, read-only reference sheet (e.g. "Sheet2") for lessons
+   * like INDIRECT that demonstrate cross-sheet references. */
+  otherSheetName?: string;
+  otherSheetCells?: GuidedCell[];
+}
+
+export interface SheetPreset {
+  cells: Record<string, string>;
+  cols: string[];
+  rows: number;
 }
 
 export interface SpreadsheetPreset {
@@ -34,6 +44,9 @@ export interface SpreadsheetPreset {
   hint: string;
   cols: string[];
   rows: number;
+  /** Extra named sheets (e.g. { Sheet2: {...} }) shown as tabs alongside the
+   * main grid, for lessons that reference another sheet's cells. */
+  extraSheets?: Record<string, SheetPreset>;
 }
 
 export interface QuizQuestion {

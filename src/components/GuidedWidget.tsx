@@ -1,24 +1,27 @@
 import { useState } from "react";
 import { evaluateFormula } from "../lib/formulaEngine";
-import type { GuidedWidgetConfig } from "../data/types";
+import type { GuidedWidgetConfig, GuidedCell } from "../data/types";
 
 interface GuidedWidgetProps {
   config: GuidedWidgetConfig;
 }
 
-export function GuidedWidget({ config }: GuidedWidgetProps) {
-  const [values, setValues] = useState<Record<string, string>>(() =>
-    Object.fromEntries(config.cells.map((c) => [c.ref, c.defaultValue])),
-  );
-
-  const { value, isError } = evaluateFormula(config.formula, values);
-  const editableCells = config.cells.filter((c) => c.editable);
-  const fixedCells = config.cells.filter((c) => !c.editable);
+function CellFields({
+  cells,
+  values,
+  onChange,
+}: {
+  cells: GuidedCell[];
+  values: Record<string, string>;
+  onChange: (ref: string, value: string) => void;
+}) {
+  const editableCells = cells.filter((c) => c.editable);
+  const fixedCells = cells.filter((c) => !c.editable);
 
   return (
-    <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-5">
+    <>
       {fixedCells.length > 0 && (
-        <div className="mb-4 flex flex-wrap gap-2">
+        <div className="mb-3 flex flex-wrap gap-2">
           {fixedCells.map((cell) => (
             <div
               key={cell.ref}
@@ -32,19 +35,53 @@ export function GuidedWidget({ config }: GuidedWidgetProps) {
       )}
 
       {editableCells.length > 0 && (
-        <div className="mb-4 flex flex-wrap gap-3">
+        <div className="mb-3 flex flex-wrap gap-3">
           {editableCells.map((cell) => (
             <label key={cell.ref} className="flex flex-col gap-1">
               <span className="text-xs font-medium text-gray-500">{cell.label}</span>
               <input
                 value={values[cell.ref] ?? ""}
-                onChange={(e) =>
-                  setValues((prev) => ({ ...prev, [cell.ref]: e.target.value }))
-                }
+                onChange={(e) => onChange(cell.ref, e.target.value)}
                 className="w-28 rounded-lg border border-gray-300 bg-white px-3 py-2 font-mono text-sm shadow-sm focus:border-emerald-400 focus:outline-none"
               />
             </label>
           ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+export function GuidedWidget({ config }: GuidedWidgetProps) {
+  const [values, setValues] = useState<Record<string, string>>(() =>
+    Object.fromEntries(config.cells.map((c) => [c.ref, c.defaultValue])),
+  );
+  const [otherValues, setOtherValues] = useState<Record<string, string>>(() =>
+    Object.fromEntries((config.otherSheetCells ?? []).map((c) => [c.ref, c.defaultValue])),
+  );
+
+  const hasOtherSheet = !!config.otherSheetName && !!config.otherSheetCells?.length;
+  const sheetMap = hasOtherSheet ? { [config.otherSheetName!]: otherValues } : undefined;
+  const { value, isError } = evaluateFormula(config.formula, values, sheetMap);
+
+  return (
+    <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-5">
+      <CellFields
+        cells={config.cells}
+        values={values}
+        onChange={(ref, v) => setValues((prev) => ({ ...prev, [ref]: v }))}
+      />
+
+      {hasOtherSheet && (
+        <div className="mb-3 rounded-lg border border-dashed border-emerald-300 bg-white/60 p-3">
+          <p className="mb-2 text-xs font-semibold text-emerald-600">
+            📄 {config.otherSheetName} 시트
+          </p>
+          <CellFields
+            cells={config.otherSheetCells!}
+            values={otherValues}
+            onChange={(ref, v) => setOtherValues((prev) => ({ ...prev, [ref]: v }))}
+          />
         </div>
       )}
 

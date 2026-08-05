@@ -1020,16 +1020,18 @@ export const excelFunctions: ExcelFunction[] = [
     name: "INDIRECT",
     category: "advanced",
     difficulty: "hard",
-    syntax: "=INDIRECT(셀주소를 담은 텍스트)",
-    kidExplanation: "글자로 적혀 있는 셀 주소를 진짜 셀 참조로 바꿔서, 그 셀의 값을 가져와요.",
-    analogy: "쪽지에 적힌 '사물함 12번'이라는 글자를 보고, 실제로 12번 사물함을 열어보는 것과 같아요.",
-    tip: "여러 시트나 셀 주소를 상황에 따라 자동으로 바꿔가며 참조하고 싶을 때 유용해요.",
-    keywords: ["간접 참조", "동적 참조"],
+    syntax: '=INDIRECT("시트이름!셀주소")',
+    kidExplanation:
+      "글자로 적혀 있는 셀 주소를 진짜 셀 참조로 바꿔서 값을 가져와요. 같은 시트뿐 아니라 다른 시트의 셀도 가져올 수 있어요.",
+    analogy: "다른 교실(다른 시트)에 있는 물건도, 쪽지에 적힌 주소만 있으면 찾아올 수 있는 것과 같아요.",
+    tip: '시트 이름과 셀 주소 사이에 느낌표(!)를 넣어서 "Sheet2!B2"처럼 적으면 다른 시트의 값도 가져올 수 있어요. 여러 시트를 넘나들며 참조를 자동으로 바꾸고 싶을 때 특히 유용해요.',
+    keywords: ["간접 참조", "동적 참조", "다른 시트", "여러 시트"],
     guided: {
-      cells: [
-        { ref: "A1", label: "칸1 값", defaultValue: "100", editable: true },
-        { ref: "A2", label: "칸2 값", defaultValue: "200", editable: true },
-        { ref: "D1", label: "찾아갈 주소", defaultValue: "A2", editable: true },
+      cells: [{ ref: "D1", label: "찾아갈 주소", defaultValue: "Sheet2!B2", editable: true }],
+      otherSheetName: "Sheet2",
+      otherSheetCells: [
+        { ref: "A1", label: "이름", defaultValue: "지우", editable: false },
+        { ref: "B2", label: "점수(B2)", defaultValue: "90", editable: true },
       ],
       formula: "=INDIRECT(D1)",
       resultLabel: "찾아온 값",
@@ -1037,14 +1039,21 @@ export const excelFunctions: ExcelFunction[] = [
     spreadsheet: {
       cols: ["A", "B", "C", "D"],
       rows: 5,
-      cells: { A1: "100", A2: "200", D1: "A2", D2: "=INDIRECT(D1)" },
-      hint: "D1에 'A1' 또는 'A2'를 입력해가며 D2에서 어떤 값을 가져오는지 확인해보세요.",
+      cells: { D1: "Sheet2!B2", D2: "=INDIRECT(D1)" },
+      hint: "Sheet1의 D1에 'Sheet2!B2'라고 적어보세요. Sheet2 탭으로 가서 B2 값을 바꾸면 D2도 같이 바뀌어요!",
+      extraSheets: {
+        Sheet2: {
+          cols: ["A", "B"],
+          rows: 3,
+          cells: { A1: "지우", B1: "점수", A2: "지우", B2: "90" },
+        },
+      },
     },
     quiz: {
-      story: "D1에는 'A2'라는 글자가 적혀 있고, A2에는 200이 들어있어요. =INDIRECT(D1)의 결과는?",
+      story: "D1에 'Sheet2!B2'라고 적혀 있고, Sheet2의 B2에는 90이 들어있어요. =INDIRECT(D1)의 결과는?",
       formulaHint: "=INDIRECT(D1)",
-      answer: "200",
-      explanation: "INDIRECT가 D1에 적힌 글자 'A2'를 진짜 셀 주소로 바꿔서 A2의 값 200을 가져와요.",
+      answer: "90",
+      explanation: "INDIRECT가 'Sheet2!B2'라는 글자를 다른 시트의 진짜 주소로 바꿔서 90을 가져와요.",
     },
   },
   {

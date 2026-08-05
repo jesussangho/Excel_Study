@@ -6,15 +6,38 @@ interface MiniSpreadsheetProps {
   preset: SpreadsheetPreset;
 }
 
+const MAIN_SHEET = "Sheet1";
+
 export function MiniSpreadsheet({ preset }: MiniSpreadsheetProps) {
-  const [cells, setCells] = useState<Record<string, string>>(preset.cells);
+  const initialSheets = (): Record<string, Record<string, string>> => ({
+    [MAIN_SHEET]: preset.cells,
+    ...Object.fromEntries(
+      Object.entries(preset.extraSheets ?? {}).map(([name, sheet]) => [name, sheet.cells]),
+    ),
+  });
+
+  const [sheets, setSheets] = useState<Record<string, Record<string, string>>>(initialSheets);
+  const [activeSheet, setActiveSheet] = useState(MAIN_SHEET);
   const [activeRef, setActiveRef] = useState<string | null>(null);
 
-  const rowNumbers = Array.from({ length: preset.rows }, (_, i) => i + 1);
+  const sheetNames = [MAIN_SHEET, ...Object.keys(preset.extraSheets ?? {})];
+  const meta =
+    activeSheet === MAIN_SHEET
+      ? { cols: preset.cols, rows: preset.rows }
+      : preset.extraSheets![activeSheet];
+  const cells = sheets[activeSheet];
+  const rowNumbers = Array.from({ length: meta.rows }, (_, i) => i + 1);
 
   function reset() {
-    setCells(preset.cells);
+    setSheets(initialSheets());
     setActiveRef(null);
+  }
+
+  function setCell(ref: string, value: string) {
+    setSheets((prev) => ({
+      ...prev,
+      [activeSheet]: { ...prev[activeSheet], [ref]: value },
+    }));
   }
 
   return (
@@ -30,9 +53,31 @@ export function MiniSpreadsheet({ preset }: MiniSpreadsheetProps) {
         </button>
       </div>
 
+      {sheetNames.length > 1 && (
+        <div className="mb-3 flex gap-1">
+          {sheetNames.map((name) => (
+            <button
+              key={name}
+              type="button"
+              onClick={() => {
+                setActiveSheet(name);
+                setActiveRef(null);
+              }}
+              className={`rounded-t-lg border px-3 py-1.5 text-xs font-semibold ${
+                activeSheet === name
+                  ? "border-emerald-300 border-b-white bg-white text-emerald-700"
+                  : "border-gray-200 bg-gray-50 text-gray-400 hover:text-gray-600"
+              }`}
+            >
+              📄 {name}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="mb-2 flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 text-sm">
         <span className="rounded bg-emerald-100 px-2 py-0.5 font-mono text-xs font-semibold text-emerald-700">
-          {activeRef ?? "-"}
+          {activeRef ? `${activeSheet}!${activeRef}` : "-"}
         </span>
         <span className="font-mono text-gray-700">
           {activeRef ? cells[activeRef] || "" : "셀을 클릭해보세요"}
@@ -44,7 +89,7 @@ export function MiniSpreadsheet({ preset }: MiniSpreadsheetProps) {
           <thead>
             <tr>
               <th className="w-8 border border-gray-200 bg-gray-50" />
-              {preset.cols.map((col) => (
+              {meta.cols.map((col) => (
                 <th
                   key={col}
                   className="border border-gray-200 bg-gray-50 px-2 py-1 font-semibold text-gray-500"
@@ -60,20 +105,18 @@ export function MiniSpreadsheet({ preset }: MiniSpreadsheetProps) {
                 <td className="border border-gray-200 bg-gray-50 px-2 text-center text-xs font-semibold text-gray-400">
                   {row}
                 </td>
-                {preset.cols.map((col) => {
+                {meta.cols.map((col) => {
                   const ref = `${col}${row}`;
                   const raw = cells[ref] ?? "";
                   const isEditing = activeRef === ref;
-                  const { value, isError } = evaluateFormula(raw, cells);
+                  const { value, isError } = evaluateFormula(raw, cells, sheets);
                   return (
                     <td key={ref} className="border border-gray-200 p-0">
                       {isEditing ? (
                         <input
                           autoFocus
                           value={raw}
-                          onChange={(e) =>
-                            setCells((prev) => ({ ...prev, [ref]: e.target.value }))
-                          }
+                          onChange={(e) => setCell(ref, e.target.value)}
                           onBlur={() => setActiveRef(null)}
                           onKeyDown={(e) => {
                             if (e.key === "Enter" || e.key === "Escape") {

@@ -24,7 +24,8 @@ function indexToColLetter(index: number): string {
   return letter;
 }
 
-type Sheet = Record<string, string>;
+export type Sheet = Record<string, string>;
+export type SheetMap = Record<string, Sheet>;
 
 function resolveCell(raw: string | undefined): number | string {
   if (raw === undefined || raw.trim() === "") return "";
@@ -37,18 +38,25 @@ function resolveCell(raw: string | undefined): number | string {
   return Number.isNaN(num) ? raw : num;
 }
 
-function createParser(sheet: Sheet): Parser {
+// Resolves a raw cell value that may live on a different sheet than the one
+// currently being evaluated (used by INDIRECT's "Sheet2!A1" syntax), running
+// its own formula through a parser bound to that sheet if needed.
+function resolveCellOn(targetSheet: Sheet, ref: string, sheetMap: SheetMap | undefined): unknown {
+  const raw = targetSheet[ref];
+  if (raw !== undefined && raw.trim().startsWith("=")) {
+    const parser = createParser(targetSheet, sheetMap);
+    const { result, error } = parser.parse(raw.trim().slice(1));
+    return error ? "" : result;
+  }
+  return resolveCell(raw);
+}
+
+function createParser(sheet: Sheet, sheetMap?: SheetMap): Parser {
   const parser = new Parser();
 
   parser.on("callCellValue", (cellCoord, done) => {
     const label = `${cellCoord.column.label}${cellCoord.row.label}`;
-    const raw = sheet[label];
-    if (raw !== undefined && raw.trim().startsWith("=")) {
-      const { result, error } = parser.parse(raw.trim().slice(1));
-      done(error ? "" : result);
-      return;
-    }
-    done(resolveCell(raw));
+    done(resolveCellOn(sheet, label, sheetMap));
   });
 
   parser.on("callRangeValue", (start, end, done) => {
@@ -57,13 +65,7 @@ function createParser(sheet: Sheet): Parser {
       const rowValues: unknown[] = [];
       for (let c = start.column.index; c <= end.column.index; c++) {
         const label = `${indexToColLetter(c)}${r + 1}`;
-        const raw = sheet[label];
-        if (raw !== undefined && raw.trim().startsWith("=")) {
-          const { result: nested, error } = parser.parse(raw.trim().slice(1));
-          rowValues.push(error ? "" : nested);
-        } else {
-          rowValues.push(resolveCell(raw));
-        }
+        rowValues.push(resolveCellOn(sheet, label, sheetMap));
       }
       result.push(rowValues);
     }
@@ -172,17 +174,20 @@ function createParser(sheet: Sheet): Parser {
 
   // INDIRECT needs to resolve a cell address that only exists as a plain
   // string value once arguments are evaluated, so it reads directly from
-  // the closed-over sheet instead of relying on callCellValue.
+  // the closed-over sheet instead of relying on callCellValue. A
+  // "SheetName!A1" address is resolved against sheetMap so INDIRECT can
+  // reach across sheets, matching how it's actually used in real workbooks.
   parser.setFunction("INDIRECT", (params: unknown[]) => {
-    const ref = String(params[0] ?? "")
-      .trim()
-      .toUpperCase();
-    const raw = sheet[ref];
-    if (raw !== undefined && raw.trim().startsWith("=")) {
-      const { result, error } = parser.parse(raw.trim().slice(1));
-      return error ? "#REF!" : result;
+    const refRaw = String(params[0] ?? "").trim();
+    const bangIdx = refRaw.indexOf("!");
+    if (bangIdx === -1) {
+      return resolveCellOn(sheet, refRaw.toUpperCase(), sheetMap);
     }
-    return resolveCell(raw);
+    const sheetName = refRaw.slice(0, bangIdx).trim();
+    const cellRef = refRaw.slice(bangIdx + 1).trim().toUpperCase();
+    const targetSheet = sheetMap?.[sheetName];
+    if (!targetSheet) return "#REF!";
+    return resolveCellOn(targetSheet, cellRef, sheetMap);
   });
 
   return parser;
@@ -259,15 +264,15 @@ function splitTopLevelArgs(argsStr: string): string[] {
 // first argument aborts the whole parse before IFERROR ever runs. Since our
 // lessons always use IFERROR as the entire top-level formula, it's handled
 // here by manually splitting and evaluating each branch instead.
-function tryEvaluateIferror(trimmed: string, sheet: Sheet): EvalResult | null {
+function tryEvaluateIferror(trimmed: string, sheet: Sheet, sheetMap: SheetMap | undefined): EvalResult | null {
   const body = trimmed.slice(1).trim();
   const match = /^IFERROR\((.*)\)$/is.exec(body);
   if (!match) return null;
   const parts = splitTopLevelArgs(match[1]);
   if (parts.length !== 2) return null;
-  const exprResult = evaluateFormula(`=${parts[0]}`, sheet);
+  const exprResult = evaluateFormula(`=${parts[0]}`, sheet, sheetMap);
   if (!exprResult.isError) return exprResult;
-  return evaluateFormula(`=${parts[1]}`, sheet);
+  return evaluateFormula(`=${parts[1]}`, sheet, sheetMap);
 }
 
 function formatResultValue(result: unknown): string {
@@ -282,17 +287,17 @@ function formatResultValue(result: unknown): string {
   return String(result);
 }
 
-export function evaluateFormula(formula: string, sheet: Sheet): EvalResult {
+export function evaluateFormula(formula: string, sheet: Sheet, sheetMap?: SheetMap): EvalResult {
   const trimmed = formula.trim();
   if (!trimmed) return { value: "", isError: false };
   if (!trimmed.startsWith("=")) {
     return { value: trimmed, isError: false };
   }
 
-  const iferrorResult = tryEvaluateIferror(trimmed, sheet);
+  const iferrorResult = tryEvaluateIferror(trimmed, sheet, sheetMap);
   if (iferrorResult) return iferrorResult;
 
-  const parser = createParser(sheet);
+  const parser = createParser(sheet, sheetMap);
   const { result, error } = parser.parse(trimmed.slice(1));
 
   if (error) {
