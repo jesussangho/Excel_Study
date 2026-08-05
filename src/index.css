@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+html {
+  font-family: system-ui, "Segoe UI", "Malgun Gothic", Roboto, sans-serif;
+}
+
+body {
+  margin: 0;
+  background-color: #f7f7fb;
+  color: #1f2330;
+}
