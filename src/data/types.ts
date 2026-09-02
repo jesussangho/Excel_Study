@@ -51,7 +51,11 @@ export interface SpreadsheetPreset {
 
 export interface QuizQuestion {
   story: string;
-  formulaHint: string;
+  /** Cell values backing the scenario, used to grade the formula the learner types in. */
+  sheet: Record<string, string>;
+  /** Extra named sheets (e.g. INDIRECT's cross-sheet lessons) available to the formula. */
+  sheetMap?: Record<string, Record<string, string>>;
+  /** Canonical correct formula (e.g. "=SUM(A1:A3)"), evaluated against `sheet` to grade answers. */
   answer: string;
   explanation: string;
 }
@@ -68,5 +72,5 @@ export interface ExcelFunction {
   keywords: string[];
   guided: GuidedWidgetConfig;
   spreadsheet: SpreadsheetPreset;
-  quiz: QuizQuestion;
+  quizzes: QuizQuestion[];
 }

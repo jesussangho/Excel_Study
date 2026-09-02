@@ -73,7 +73,7 @@ export function FunctionPage() {
 
       <section>
         <h2 className="mb-3 text-lg font-bold text-gray-700">3. 문제로 확인하기</h2>
-        <QuizCard functionId={fn.id} quiz={fn.quiz} />
+        <QuizCard functionId={fn.id} functionName={fn.name} quizzes={fn.quizzes} />
       </section>
     </div>
   );
