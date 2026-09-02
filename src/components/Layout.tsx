@@ -1,4 +1,5 @@
 import { Link, Outlet } from "react-router-dom";
+import { ScrollToTopButton } from "./ScrollToTopButton";
 
 export function Layout() {
   return (
@@ -31,6 +32,7 @@ export function Layout() {
       <footer className="mx-auto max-w-4xl px-4 py-8 text-center text-xs text-gray-400">
         놀면서 배우는 엑셀 함수 학습 사이트
       </footer>
+      <ScrollToTopButton />
     </div>
   );
 }
