@@ -63,6 +63,22 @@ export function HomePage() {
         </div>
       </section>
 
+      <Link
+        to="/shortcuts"
+        className="flex items-center justify-between rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md"
+      >
+        <span className="flex items-center gap-3">
+          <span className="text-3xl">⌨️</span>
+          <span>
+            <span className="block text-lg font-bold text-gray-800">엑셀 단축키 모음</span>
+            <span className="block text-sm text-gray-500">
+              기본 단축키부터 실무 필수 단축키까지 익혀보세요
+            </span>
+          </span>
+        </span>
+        <span className="text-gray-300">→</span>
+      </Link>
+
       {favoriteFns.length > 0 && (
         <section>
           <h2 className="mb-3 text-lg font-bold text-gray-700">⭐ 즐겨찾기</h2>

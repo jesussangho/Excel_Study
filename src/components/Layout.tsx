@@ -9,12 +9,20 @@ export function Layout() {
             <span className="text-2xl">📊</span>
             엑셀 함수 놀이터
           </Link>
-          <Link
-            to="/requests"
-            className="ml-auto text-sm font-medium text-gray-400 hover:text-gray-600"
-          >
-            💭 건의함
-          </Link>
+          <nav className="ml-auto flex items-center gap-4">
+            <Link
+              to="/shortcuts"
+              className="text-sm font-medium text-gray-400 hover:text-gray-600"
+            >
+              ⌨️ 단축키
+            </Link>
+            <Link
+              to="/requests"
+              className="text-sm font-medium text-gray-400 hover:text-gray-600"
+            >
+              💭 건의함
+            </Link>
+          </nav>
         </div>
       </header>
       <main className="mx-auto max-w-4xl px-4 py-8">

@@ -1,6 +1,7 @@
 const PROGRESS_KEY = "excel-learn:completed";
 const FAVORITES_KEY = "excel-learn:favorites";
 const WRONG_KEY = "excel-learn:wrong";
+const MEMORIZED_SHORTCUTS_KEY = "excel-learn:shortcuts-memorized";
 
 function readSet(key: string): Set<string> {
   try {
@@ -58,4 +59,19 @@ export function removeWrongAnswer(id: string) {
   const s = readSet(WRONG_KEY);
   s.delete(id);
   writeSet(WRONG_KEY, s);
+}
+
+export function getMemorizedShortcutIds(): Set<string> {
+  return readSet(MEMORIZED_SHORTCUTS_KEY);
+}
+
+export function toggleMemorizedShortcut(id: string): boolean {
+  const s = readSet(MEMORIZED_SHORTCUTS_KEY);
+  if (s.has(id)) {
+    s.delete(id);
+  } else {
+    s.add(id);
+  }
+  writeSet(MEMORIZED_SHORTCUTS_KEY, s);
+  return s.has(id);
 }
